@@ -236,21 +236,22 @@
   .reset-btn {
     display: block;
     width: 100%;
-    padding: 14px;
+    padding: 16px;
     margin-bottom: 14px;
-    background: var(--surface);
-    border: 2px solid var(--border);
+    background: var(--accent);
+    border: none;
     border-radius: 12px;
     color: #ffffff;
-    font-size: 17px;
-    font-weight: 600;
+    font-size: 19px;
+    font-weight: 700;
     font-family: inherit;
     cursor: pointer;
     text-align: center;
+    letter-spacing: 0.3px;
     -webkit-tap-highlight-color: transparent;
   }
   .reset-btn:active {
-    background: var(--border);
+    background: #7c6fd4;
   }
   footer {
     text-align: center;
@@ -271,8 +272,8 @@
   <div class="card-title">Revenue by 2031 (growth from $2M)</div>
   <div class="slider-row">
     <span class="slider-label revenue">Rev</span>
-    <input type="range" id="revenueSlider" min="2" max="15" step="0.5" value="10">
-    <span class="slider-value revenue" id="revenueValue">$10.0M</span>
+    <input type="range" id="revenueSlider" min="2" max="15" step="0.5" value="14">
+    <span class="slider-value revenue" id="revenueValue">$14.0M</span>
   </div>
   <div class="slider-hint">$2M in 2026 &rarr; slider target by 2031 &middot; 3-month cash lag</div>
   <div class="radio-row">
@@ -282,13 +283,13 @@
 </div>
 
 <div class="card">
-  <div class="card-title">Expenses by 2031 (growth from $2M)</div>
+  <div class="card-title">Expenses by 2031 (growth from $3M)</div>
   <div class="slider-row">
     <span class="slider-label expense">Exp</span>
-    <input type="range" id="expenseSlider" min="2" max="12" step="0.5" value="8">
+    <input type="range" id="expenseSlider" min="3" max="12" step="0.5" value="8">
     <span class="slider-value expense" id="expenseValue">$8.0M</span>
   </div>
-  <div class="slider-hint">$2M in 2026 &rarr; slider target by 2031 &middot; Paid immediately</div>
+  <div class="slider-hint">$3M in 2026 &rarr; slider target by 2031 &middot; Paid immediately</div>
   <div class="radio-row">
     <label><input type="radio" name="expGrowth" value="exponential"> Exponential</label>
     <label><input type="radio" name="expGrowth" value="linear" checked> Linear</label>
@@ -339,14 +340,14 @@
   </div>
 </div>
 
-<button class="reset-btn" id="resetBtn">Revert to Default Assumptions</button>
+<button class="reset-btn" id="resetBtn">Start Over</button>
 
 <footer>Cash Needs Calculator &middot; For planning purposes only</footer>
 
 <script>
 // Defaults
 const DEFAULTS = {
-  revenue: 10,
+  revenue: 14,
   expenses: 8,
   cash: 3.5,
   revGrowth: 'exponential',
@@ -362,7 +363,8 @@ const statusBanner = document.getElementById('statusBanner');
 const resetBtn = document.getElementById('resetBtn');
 
 // Constants
-const BASE_RATE = 2;
+const BASE_REV_RATE = 2;
+const BASE_EXP_RATE = 3;
 const Y_AXIS_MIN = -15;
 const Y_AXIS_MAX = 20;
 
@@ -533,7 +535,7 @@ function update() {
   // Pre-compute monthly revenue amounts for lag lookup
   const monthlyRevAmounts = [];
   for (let i = 0; i < totalMonths; i++) {
-    const annualized = getRate(revMode, BASE_RATE, revTarget, i, totalMonths);
+    const annualized = getRate(revMode, BASE_REV_RATE, revTarget, i, totalMonths);
     monthlyRevAmounts.push(annualized / 12);
   }
 
@@ -543,8 +545,8 @@ function update() {
   let totalExpenses = 0;
 
   for (let i = 0; i < totalMonths; i++) {
-    const annualRevAtMonth = getRate(revMode, BASE_RATE, revTarget, i, totalMonths);
-    const annualExpAtMonth = getRate(expMode, BASE_RATE, expTarget, i, totalMonths);
+    const annualRevAtMonth = getRate(revMode, BASE_REV_RATE, revTarget, i, totalMonths);
+    const annualExpAtMonth = getRate(expMode, BASE_EXP_RATE, expTarget, i, totalMonths);
     revData.push(parseFloat(annualRevAtMonth.toFixed(2)));
     expData.push(parseFloat(annualExpAtMonth.toFixed(2)));
 
