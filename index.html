@@ -291,8 +291,8 @@
   </div>
   <div class="slider-hint">$3M in 2026 &rarr; slider target by 2031 &middot; Paid immediately</div>
   <div class="radio-row">
-    <label><input type="radio" name="expGrowth" value="exponential"> Exponential</label>
-    <label><input type="radio" name="expGrowth" value="linear" checked> Linear</label>
+    <label><input type="radio" name="expGrowth" value="exponential" checked> Exponential</label>
+    <label><input type="radio" name="expGrowth" value="linear"> Linear</label>
   </div>
 </div>
 
@@ -351,7 +351,7 @@ const DEFAULTS = {
   expenses: 8,
   cash: 3.5,
   revGrowth: 'exponential',
-  expGrowth: 'linear'
+  expGrowth: 'exponential'
 };
 
 const revenueSlider = document.getElementById('revenueSlider');
@@ -365,7 +365,7 @@ const resetBtn = document.getElementById('resetBtn');
 // Constants
 const BASE_REV_RATE = 2;
 const BASE_EXP_RATE = 3;
-const Y_AXIS_MIN = -15;
+const Y_AXIS_MIN = -5;
 const Y_AXIS_MAX = 20;
 
 // Time range: Apr 2026 through Dec 2031
@@ -465,15 +465,17 @@ const chart = new Chart(document.getElementById('chart').getContext('2d'), {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#1a1a1a',
+        backgroundColor: 'rgba(0,0,0,0.7)',
         titleColor: '#ffffff',
         bodyColor: '#cccccc',
-        borderColor: '#444444',
+        borderColor: 'rgba(255,255,255,0.2)',
         borderWidth: 1,
         cornerRadius: 8,
         padding: 12,
         titleFont: { size: 14, weight: '600' },
         bodyFont: { size: 14 },
+        position: 'nearest',
+        caretSize: 6,
         callbacks: {
           label: function(context) {
             const val = context.parsed.y;
