@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Cash Needs Calculator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #000000;
+    --surface: #141414;
+    --border: #444444;
+    --text: #ffffff;
+    --muted: #cccccc;
+    --revenue: #4ade80;
+    --expense: #ff6b6b;
+    --cash: #6eb5ff;
+    --accent: #a78bfa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+    overflow-x: hidden;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    text-align: center;
+    padding: 20px 0 4px;
+    letter-spacing: -0.3px;
+    color: #ffffff;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: 16px;
+    margin-bottom: 16px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #ffffff;
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .slider-label {
+    font-size: 18px;
+    font-weight: 700;
+    min-width: 34px;
+  }
+  .slider-label.revenue { color: var(--revenue); }
+  .slider-label.expense { color: var(--expense); }
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--border);
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--bg);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+  #revenueSlider::-webkit-slider-thumb { background: var(--revenue); }
+  #expenseSlider::-webkit-slider-thumb { background: var(--expense); }
+  .slider-value {
+    font-size: 20px;
+    font-weight: 700;
+    min-width: 68px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .slider-value.revenue { color: var(--revenue); }
+  .slider-value.expense { color: var(--expense); }
+  .slider-hint {
+    font-size: 14px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 4px;
+  }
+  .radio-row {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 10px;
+  }
+  .radio-row label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #ffffff;
+    cursor: pointer;
+  }
+  .radio-row input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .cash-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .cash-input-row label {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--cash);
+  }
+  .cash-input-row span.prefix {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--cash);
+  }
+  input[type="number"] {
+    flex: 1;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    color: var(--cash);
+    font-size: 22px;
+    font-weight: 700;
+    padding: 12px 14px;
+    outline: none;
+    font-family: inherit;
+    max-width: 130px;
+  }
+  input[type="number"]:focus { border-color: var(--cash); }
+  .cash-unit {
+    font-size: 18px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .chart-container {
+    position: relative;
+    width: 100%;
+    height: 420px;
+  }
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+    color: #ffffff;
+    font-weight: 500;
+  }
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .summary-item {
+    text-align: center;
+    padding: 10px;
+    border-radius: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  .summary-item .label {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .summary-item .value {
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .summary-item .value.positive { color: var(--revenue); }
+  .summary-item .value.negative { color: var(--expense); }
+  .summary-item .value.cash-color { color: var(--cash); }
+  .status-banner {
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 16px;
+    text-align: center;
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+  .status-banner.negative {
+    background: rgba(255,107,107,0.15);
+    border: 1px solid rgba(255,107,107,0.4);
+    color: var(--expense);
+  }
+  .status-banner.positive {
+    background: rgba(74,222,128,0.15);
+    border: 1px solid rgba(74,222,128,0.4);
+    color: var(--revenue);
+  }
+  .reset-btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 14px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .reset-btn:active {
+    background: var(--border);
+  }
+  footer {
+    text-align: center;
+    padding: 16px 0 24px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<h1>Cash Needs Calculator</h1>
+<p class="subtitle">Apr 2026 – Dec 2031 &middot; Monthly Projection</p>
+
+<div id="statusBanner" class="status-banner positive"></div>
+
+<div class="card">
+  <div class="card-title">Revenue by 2031 (growth from $2M)</div>
+  <div class="slider-row">
+    <span class="slider-label revenue">Rev</span>
+    <input type="range" id="revenueSlider" min="2" max="15" step="0.5" value="10">
+    <span class="slider-value revenue" id="revenueValue">$10.0M</span>
+  </div>
+  <div class="slider-hint">$2M in 2026 &rarr; slider target by 2031 &middot; 3-month cash lag</div>
+  <div class="radio-row">
+    <label><input type="radio" name="revGrowth" value="exponential" checked> Exponential</label>
+    <label><input type="radio" name="revGrowth" value="linear"> Linear</label>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Expenses by 2031 (growth from $2M)</div>
+  <div class="slider-row">
+    <span class="slider-label expense">Exp</span>
+    <input type="range" id="expenseSlider" min="2" max="12" step="0.5" value="8">
+    <span class="slider-value expense" id="expenseValue">$8.0M</span>
+  </div>
+  <div class="slider-hint">$2M in 2026 &rarr; slider target by 2031 &middot; Paid immediately</div>
+  <div class="radio-row">
+    <label><input type="radio" name="expGrowth" value="exponential"> Exponential</label>
+    <label><input type="radio" name="expGrowth" value="linear" checked> Linear</label>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Starting Cash Balance (Apr 2026)</div>
+  <div class="cash-input-row">
+    <label>Cash</label>
+    <span class="prefix">$</span>
+    <input type="number" id="cashInput" value="3.5" min="0" max="50" step="0.1">
+    <span class="cash-unit">M</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Cash Projection</div>
+  <div class="chart-container">
+    <canvas id="chart"></canvas>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--revenue)"></div>Revenue (annualized)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--expense)"></div>Expenses (annualized)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--cash)"></div>Cash Balance</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Summary at Dec 2031</div>
+  <div class="summary">
+    <div class="summary-item">
+      <div class="label">Ending Cash</div>
+      <div class="value cash-color" id="endCash">&mdash;</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Lowest Cash</div>
+      <div class="value" id="minCash">&mdash;</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Total Revenue</div>
+      <div class="value positive" id="totalRev">&mdash;</div>
+    </div>
+    <div class="summary-item">
+      <div class="label">Total Expenses</div>
+      <div class="value negative" id="totalExp">&mdash;</div>
+    </div>
+  </div>
+</div>
+
+<button class="reset-btn" id="resetBtn">Revert to Default Assumptions</button>
+
+<footer>Cash Needs Calculator &middot; For planning purposes only</footer>
+
+<script>
+// Defaults
+const DEFAULTS = {
+  revenue: 10,
+  expenses: 8,
+  cash: 3.5,
+  revGrowth: 'exponential',
+  expGrowth: 'linear'
+};
+
+const revenueSlider = document.getElementById('revenueSlider');
+const expenseSlider = document.getElementById('expenseSlider');
+const cashInput = document.getElementById('cashInput');
+const revenueValueEl = document.getElementById('revenueValue');
+const expenseValueEl = document.getElementById('expenseValue');
+const statusBanner = document.getElementById('statusBanner');
+const resetBtn = document.getElementById('resetBtn');
+
+// Constants
+const BASE_RATE = 2;
+const Y_AXIS_MIN = -15;
+const Y_AXIS_MAX = 20;
+
+// Time range: Apr 2026 through Dec 2031
+// That's 9 months in 2026 (Apr–Dec) + 5 full years (2027–2031) = 9 + 60 = 69 months
+const startYear = 2026;
+const startMonth = 3; // 0-indexed: 3 = April
+const endYear = 2031;
+const endMonth = 11; // December
+
+const months = [];
+const monthLabels = [];
+let totalMonths = 0;
+
+for (let y = startYear; y <= endYear; y++) {
+  const mStart = (y === startYear) ? startMonth : 0;
+  const mEnd = (y === endYear) ? endMonth : 11;
+  for (let m = mStart; m <= mEnd; m++) {
+    totalMonths++;
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    if (m === 0) {
+      monthLabels.push(`Jan ${y}`);
+    } else if (m === 6) {
+      monthLabels.push(`Jul ${y}`);
+    } else if (m === startMonth && y === startYear) {
+      monthLabels.push(`Apr ${y}`);
+    } else {
+      monthLabels.push('');
+    }
+  }
+}
+
+// Growth functions
+function expRate(baseRate, targetRate, i, total) {
+  if (targetRate <= baseRate) return baseRate;
+  const t = i / (total - 1);
+  return baseRate * Math.pow(targetRate / baseRate, t);
+}
+
+function linearRate(baseRate, targetRate, i, total) {
+  if (targetRate <= baseRate) return baseRate;
+  const t = i / (total - 1);
+  return baseRate + (targetRate - baseRate) * t;
+}
+
+function getRate(mode, baseRate, targetRate, i, total) {
+  return mode === 'exponential'
+    ? expRate(baseRate, targetRate, i, total)
+    : linearRate(baseRate, targetRate, i, total);
+}
+
+function getGrowthMode(name) {
+  return document.querySelector(`input[name="${name}"]:checked`).value;
+}
+
+const chart = new Chart(document.getElementById('chart').getContext('2d'), {
+  type: 'line',
+  data: {
+    labels: monthLabels,
+    datasets: [
+      {
+        label: 'Revenue (annualized)',
+        data: [],
+        borderColor: '#4ade80',
+        backgroundColor: 'rgba(74,222,128,0.08)',
+        borderWidth: 2.5,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: false,
+      },
+      {
+        label: 'Expenses (annualized)',
+        data: [],
+        borderColor: '#ff6b6b',
+        backgroundColor: 'rgba(255,107,107,0.08)',
+        borderWidth: 2.5,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: false,
+        borderDash: [6, 3],
+      },
+      {
+        label: 'Cash Balance',
+        data: [],
+        borderColor: '#6eb5ff',
+        backgroundColor: 'rgba(110,181,255,0.12)',
+        borderWidth: 3,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: true,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1a1a1a',
+        titleColor: '#ffffff',
+        bodyColor: '#cccccc',
+        borderColor: '#444444',
+        borderWidth: 1,
+        cornerRadius: 8,
+        padding: 12,
+        titleFont: { size: 14, weight: '600' },
+        bodyFont: { size: 14 },
+        callbacks: {
+          label: function(context) {
+            const val = context.parsed.y;
+            return `${context.dataset.label}: $${val.toFixed(1)}M`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: {
+          color: '#cccccc',
+          font: { size: 13, weight: '500' },
+          maxRotation: 45,
+          autoSkip: false,
+          callback: function(value, index) {
+            return monthLabels[index] || null;
+          }
+        },
+        grid: { color: 'rgba(255,255,255,0.1)' }
+      },
+      y: {
+        min: Y_AXIS_MIN,
+        max: Y_AXIS_MAX,
+        ticks: {
+          color: '#cccccc',
+          font: { size: 14, weight: '500' },
+          stepSize: 5,
+          callback: function(value) {
+            return '$' + value + 'M';
+          }
+        },
+        grid: { color: 'rgba(255,255,255,0.1)' }
+      }
+    }
+  }
+});
+
+function fmt(val) {
+  return '$' + val.toFixed(1) + 'M';
+}
+
+function update() {
+  const revTarget = parseFloat(revenueSlider.value);
+  const expTarget = parseFloat(expenseSlider.value);
+  const startCash = parseFloat(cashInput.value) || 0;
+  const revMode = getGrowthMode('revGrowth');
+  const expMode = getGrowthMode('expGrowth');
+
+  revenueValueEl.textContent = `$${revTarget.toFixed(1)}M`;
+  expenseValueEl.textContent = `$${expTarget.toFixed(1)}M`;
+
+  const lagMonths = 3;
+
+  const revData = [];
+  const expData = [];
+  const cashData = [];
+
+  // Pre-compute monthly revenue amounts for lag lookup
+  const monthlyRevAmounts = [];
+  for (let i = 0; i < totalMonths; i++) {
+    const annualized = getRate(revMode, BASE_RATE, revTarget, i, totalMonths);
+    monthlyRevAmounts.push(annualized / 12);
+  }
+
+  let cash = startCash;
+  let minCash = startCash;
+  let totalRevenue = 0;
+  let totalExpenses = 0;
+
+  for (let i = 0; i < totalMonths; i++) {
+    const annualRevAtMonth = getRate(revMode, BASE_RATE, revTarget, i, totalMonths);
+    const annualExpAtMonth = getRate(expMode, BASE_RATE, expTarget, i, totalMonths);
+    revData.push(parseFloat(annualRevAtMonth.toFixed(2)));
+    expData.push(parseFloat(annualExpAtMonth.toFixed(2)));
+
+    // Cash in: revenue from 3 months ago (lagged)
+    const cashIn = (i >= lagMonths) ? monthlyRevAmounts[i - lagMonths] : 0;
+    // Cash out: current month's expenses (no lag)
+    const cashOut = annualExpAtMonth / 12;
+
+    cash = cash + cashIn - cashOut;
+    totalRevenue += cashIn;
+    totalExpenses += cashOut;
+
+    if (cash < minCash) minCash = cash;
+    cashData.push(parseFloat(cash.toFixed(2)));
+  }
+
+  chart.data.datasets[0].data = revData;
+  chart.data.datasets[1].data = expData;
+  chart.data.datasets[2].data = cashData;
+  chart.update('none');
+
+  // Summary
+  const endCash = cashData[cashData.length - 1];
+  document.getElementById('endCash').textContent = fmt(endCash);
+  document.getElementById('totalRev').textContent = fmt(totalRevenue);
+  document.getElementById('totalExp').textContent = fmt(totalExpenses);
+
+  const minCashEl = document.getElementById('minCash');
+  minCashEl.textContent = fmt(minCash);
+  minCashEl.className = 'value ' + (minCash < 0 ? 'negative' : 'positive');
+
+  // Status banner (always visible)
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if (minCash < 0) {
+    const negMonth = cashData.findIndex(v => v < 0);
+    let mIdx = startMonth + negMonth;
+    let yr = startYear + Math.floor(mIdx / 12);
+    let mo = mIdx % 12;
+    statusBanner.className = 'status-banner negative';
+    statusBanner.innerHTML = `Cash goes negative in <strong>${monthNames[mo]} ${yr}</strong> — you'll need $${Math.abs(minCash).toFixed(1)}M in additional funding.`;
+  } else {
+    // Find the month with the lowest cash (tightest point)
+    let tightIdx = 0;
+    for (let i = 1; i < cashData.length; i++) {
+      if (cashData[i] < cashData[tightIdx]) tightIdx = i;
+    }
+    let mIdx = startMonth + tightIdx;
+    let yr = startYear + Math.floor(mIdx / 12);
+    let mo = mIdx % 12;
+    statusBanner.className = 'status-banner positive';
+    statusBanner.innerHTML = `Cash stays positive — tightest month is <strong>${monthNames[mo]} ${yr}</strong> with a surplus of $${minCash.toFixed(1)}M.`;
+  }
+}
+
+// Reset button
+resetBtn.addEventListener('click', function() {
+  revenueSlider.value = DEFAULTS.revenue;
+  expenseSlider.value = DEFAULTS.expenses;
+  cashInput.value = DEFAULTS.cash;
+  document.querySelector(`input[name="revGrowth"][value="${DEFAULTS.revGrowth}"]`).checked = true;
+  document.querySelector(`input[name="expGrowth"][value="${DEFAULTS.expGrowth}"]`).checked = true;
+  update();
+});
+
+// Event listeners
+revenueSlider.addEventListener('input', update);
+expenseSlider.addEventListener('input', update);
+cashInput.addEventListener('input', update);
+document.querySelectorAll('input[name="revGrowth"]').forEach(r => r.addEventListener('change', update));
+document.querySelectorAll('input[name="expGrowth"]').forEach(r => r.addEventListener('change', update));
+
+// Initial render
+update();
+</script>
+</body>
+</html>
