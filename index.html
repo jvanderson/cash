@@ -106,27 +106,6 @@
     text-align: center;
     margin-top: 4px;
   }
-  .radio-row {
-    display: flex;
-    justify-content: center;
-    gap: 24px;
-    margin-top: 10px;
-  }
-  .radio-row label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 16px;
-    font-weight: 500;
-    color: #ffffff;
-    cursor: pointer;
-  }
-  .radio-row input[type="radio"] {
-    width: 20px;
-    height: 20px;
-    accent-color: var(--accent);
-    cursor: pointer;
-  }
   .cash-input-row {
     display: flex;
     align-items: center;
@@ -269,31 +248,23 @@
 <div id="statusBanner" class="status-banner positive"></div>
 
 <div class="card">
-  <div class="card-title">Revenue by 2031 (growth from $2M)</div>
+  <div class="card-title">Revenue by 2031 (linear growth from $3M)</div>
   <div class="slider-row">
     <span class="slider-label revenue">Rev</span>
-    <input type="range" id="revenueSlider" min="2" max="15" step="0.5" value="14">
-    <span class="slider-value revenue" id="revenueValue">$14.0M</span>
+    <input type="range" id="revenueSlider" min="3" max="15" step="0.5" value="12">
+    <span class="slider-value revenue" id="revenueValue">$12.0M</span>
   </div>
-  <div class="slider-hint">$2M in 2026 &rarr; slider target by 2031 &middot; 3-month cash lag</div>
-  <div class="radio-row">
-    <label><input type="radio" name="revGrowth" value="exponential" checked> Exponential</label>
-    <label><input type="radio" name="revGrowth" value="linear"> Linear</label>
-  </div>
+  <div class="slider-hint">$3M in 2026 &rarr; slider target by 2031 &middot; 3-month cash lag</div>
 </div>
 
 <div class="card">
-  <div class="card-title">Expenses by 2031 (growth from $3M)</div>
+  <div class="card-title">Expenses by 2031 (linear growth from $4M)</div>
   <div class="slider-row">
     <span class="slider-label expense">Exp</span>
-    <input type="range" id="expenseSlider" min="3" max="12" step="0.5" value="8">
-    <span class="slider-value expense" id="expenseValue">$8.0M</span>
+    <input type="range" id="expenseSlider" min="4" max="15" step="0.5" value="9">
+    <span class="slider-value expense" id="expenseValue">$9.0M</span>
   </div>
-  <div class="slider-hint">$3M in 2026 &rarr; slider target by 2031 &middot; Paid immediately</div>
-  <div class="radio-row">
-    <label><input type="radio" name="expGrowth" value="exponential" checked> Exponential</label>
-    <label><input type="radio" name="expGrowth" value="linear"> Linear</label>
-  </div>
+  <div class="slider-hint">$4M in 2026 &rarr; slider target by 2031 &middot; Paid immediately</div>
 </div>
 
 <div class="card">
@@ -347,11 +318,9 @@
 <script>
 // Defaults
 const DEFAULTS = {
-  revenue: 14,
-  expenses: 8,
-  cash: 3.5,
-  revGrowth: 'exponential',
-  expGrowth: 'exponential'
+  revenue: 12,
+  expenses: 9,
+  cash: 3.5
 };
 
 const revenueSlider = document.getElementById('revenueSlider');
@@ -363,8 +332,8 @@ const statusBanner = document.getElementById('statusBanner');
 const resetBtn = document.getElementById('resetBtn');
 
 // Constants
-const BASE_REV_RATE = 2;
-const BASE_EXP_RATE = 3;
+const BASE_REV_RATE = 3;
+const BASE_EXP_RATE = 4;
 const Y_AXIS_MIN = -5;
 const Y_AXIS_MAX = 20;
 
@@ -397,27 +366,11 @@ for (let y = startYear; y <= endYear; y++) {
   }
 }
 
-// Growth functions
-function expRate(baseRate, targetRate, i, total) {
-  if (targetRate <= baseRate) return baseRate;
-  const t = i / (total - 1);
-  return baseRate * Math.pow(targetRate / baseRate, t);
-}
-
+// Linear growth: returns annualized rate at month i
 function linearRate(baseRate, targetRate, i, total) {
   if (targetRate <= baseRate) return baseRate;
   const t = i / (total - 1);
   return baseRate + (targetRate - baseRate) * t;
-}
-
-function getRate(mode, baseRate, targetRate, i, total) {
-  return mode === 'exponential'
-    ? expRate(baseRate, targetRate, i, total)
-    : linearRate(baseRate, targetRate, i, total);
-}
-
-function getGrowthMode(name) {
-  return document.querySelector(`input[name="${name}"]:checked`).value;
 }
 
 const chart = new Chart(document.getElementById('chart').getContext('2d'), {
@@ -522,8 +475,6 @@ function update() {
   const revTarget = parseFloat(revenueSlider.value);
   const expTarget = parseFloat(expenseSlider.value);
   const startCash = parseFloat(cashInput.value) || 0;
-  const revMode = getGrowthMode('revGrowth');
-  const expMode = getGrowthMode('expGrowth');
 
   revenueValueEl.textContent = `$${revTarget.toFixed(1)}M`;
   expenseValueEl.textContent = `$${expTarget.toFixed(1)}M`;
@@ -537,7 +488,7 @@ function update() {
   // Pre-compute monthly revenue amounts for lag lookup
   const monthlyRevAmounts = [];
   for (let i = 0; i < totalMonths; i++) {
-    const annualized = getRate(revMode, BASE_REV_RATE, revTarget, i, totalMonths);
+    const annualized = linearRate(BASE_REV_RATE, revTarget, i, totalMonths);
     monthlyRevAmounts.push(annualized / 12);
   }
 
@@ -547,8 +498,8 @@ function update() {
   let totalExpenses = 0;
 
   for (let i = 0; i < totalMonths; i++) {
-    const annualRevAtMonth = getRate(revMode, BASE_REV_RATE, revTarget, i, totalMonths);
-    const annualExpAtMonth = getRate(expMode, BASE_EXP_RATE, expTarget, i, totalMonths);
+    const annualRevAtMonth = linearRate(BASE_REV_RATE, revTarget, i, totalMonths);
+    const annualExpAtMonth = linearRate(BASE_EXP_RATE, expTarget, i, totalMonths);
     revData.push(parseFloat(annualRevAtMonth.toFixed(2)));
     expData.push(parseFloat(annualExpAtMonth.toFixed(2)));
 
@@ -608,8 +559,6 @@ resetBtn.addEventListener('click', function() {
   revenueSlider.value = DEFAULTS.revenue;
   expenseSlider.value = DEFAULTS.expenses;
   cashInput.value = DEFAULTS.cash;
-  document.querySelector(`input[name="revGrowth"][value="${DEFAULTS.revGrowth}"]`).checked = true;
-  document.querySelector(`input[name="expGrowth"][value="${DEFAULTS.expGrowth}"]`).checked = true;
   update();
 });
 
@@ -617,8 +566,6 @@ resetBtn.addEventListener('click', function() {
 revenueSlider.addEventListener('input', update);
 expenseSlider.addEventListener('input', update);
 cashInput.addEventListener('input', update);
-document.querySelectorAll('input[name="revGrowth"]').forEach(r => r.addEventListener('change', update));
-document.querySelectorAll('input[name="expGrowth"]').forEach(r => r.addEventListener('change', update));
 
 // Initial render
 update();
